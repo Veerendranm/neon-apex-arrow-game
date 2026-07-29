@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Apex: AI Arrow Protocol</title>
+    <!-- Tailwind CSS for modern aesthetic UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Orbitron & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    <!-- MediaPipe Hands for Computer Vision Gesture Control -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #030712; color: #f3f4f6; overflow: hidden; }
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        .glass-panel { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .neon-glow-cyan { text-shadow: 0 0 10px rgba(6, 182, 212, 0.7), 0 0 20px rgba(6, 182, 212, 0.5); }
+        .neon-glow-magenta { text-shadow: 0 0 10px rgba(236, 72, 153, 0.7), 0 0 20px rgba(236, 72, 153, 0.5); }
+        canvas { touch-action: none; }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between select-none relative">
+
+    <!-- Background Ambient Glows -->
+    <div class="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-cyan-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-pink-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+
+    <!-- HEADER / LIVE HUD -->
+    <header class="w-full p-4 flex justify-between items-center z-20 glass-panel border-b border-white/10">
+        <div class="flex items-center space-x-3">
+            <div class="w-3 h-3 rounded-full bg-cyan-400 animate-pulse"></div>
+            <h1 class="font-orbitron text-xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-500">NEON APEX <span class="text-xs text-cyan-300 font-normal px-2 py-0.5 rounded border border-cyan-500/30">AI-EDITION</span></h1>
+        </div>
+        <div id="game-hud" class="hidden flex items-center space-x-6 text-sm font-orbitron">
+            <div>SCORE: <span id="hud-score" class="text-cyan-400 font-bold">0</span></div>
+            <div>LIVES: <span id="hud-lives" class="text-pink-500 font-bold">❤️❤️❤️</span></div>
+            <div>AI TIER: <span id="hud-tier" class="text-yellow-400 font-bold">LVL 1 (Adaptive)</span></div>
+        </div>
+        <div class="flex items-center space-x-2 text-xs text-gray-400">
+            <span id="cam-status" class="inline-block w-2 h-2 rounded-full bg-red-500"></span>
+            <span>Webcam AI</span>
+        </div>
+    </header>
+
+    <!-- MAIN GAME CONTAINER / SCREENS -->
+    <main class="flex-1 relative flex items-center justify-center overflow-hidden">
+        
+        <!-- CANVAS FOR GAMEPLAY -->
+        <canvas id="gameCanvas" class="absolute inset-0 w-full h-full cursor-crosshair"></canvas>
+
+        <!-- HIDDEN WEBCAM VIDEO ELEMENT FOR MEDIAPIPE -->
+        <video id="webcam" class="hidden" playsinline></video>
+
+        <!-- START MENU SCREEN -->
+        <div id="start-screen" class="absolute z-30 glass-panel p-8 rounded-2xl max-w-lg w-full mx-4 text-center shadow-2xl border border-white/10">
+            <h2 class="font-orbitron text-3xl font-black mb-3 neon-glow-cyan text-white">READY PLAYER?</h2>
+            <p class="text-gray-300 text-sm mb-6 leading-relaxed">
+                Clear incoming neon arrows by tapping or using <span class="text-cyan-400 font-semibold">Webcam Hand Gestures</span>. Avoid clashing 3 times! Powered by real-time adaptive AI difficulty and post-game analytics.
+            </p>
+            <div class="space-y-3">
+                <button onclick="startGame()" class="w-full py-4 rounded-xl font-orbitron font-bold text-lg bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-400 hover:to-blue-500 transition shadow-lg shadow-cyan-500/25 cursor-pointer">
+                    INITIALIZE GAME PROTOCOL
+                </button>
+                <div class="grid grid-cols-2 gap-3 text-xs text-gray-400 pt-2">
+                    <div class="glass-panel p-2 rounded-lg border border-white/5">🖐️ Air Gestures Active</div>
+                    <div class="glass-panel p-2 rounded-lg border border-white/5">⚡ Adaptive AI Scaling</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GAME OVER / AI COACH DASHBOARD SCREEN -->
+        <div id="gameover-screen" class="hidden absolute z-30 glass-panel p-8 rounded-2xl max-w-xl w-full mx-4 shadow-2xl border border-white/10">
+            <div class="text-center mb-6">
+                <h2 class="font-orbitron text-3xl font-black text-pink-500 neon-glow-magenta mb-1">SESSION TERMINATED</h2>
+                <p class="text-gray-400 text-xs">AI Performance Analytics Generated</p>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-3 mb-6 text-center">
+                <div class="glass-panel p-3 rounded-xl border border-white/5">
+                    <div class="text-xs text-gray-400 font-orbitron">FINAL SCORE</div>
+                    <div id="final-score" class="text-2xl font-black text-cyan-400 font-orbitron mt-1">0</div>
+                </div>
+                <div class="glass-panel p-3 rounded-xl border border-white/5">
+                    <div class="text-xs text-gray-400 font-orbitron">AVG REFLEX</div>
+                    <div id="final-reflex" class="text-2xl font-black text-yellow-400 font-orbitron mt-1">0ms</div>
+                </div>
+                <div class="glass-panel p-3 rounded-xl border border-white/5">
+                    <div class="text-xs text-gray-400 font-orbitron">ACCURACY</div>
+                    <div id="final-acc" class="text-2xl font-black text-pink-400 font-orbitron mt-1">0%</div>
+                </div>
+            </div>
+
+            <!-- AI COACH INSIGHT BOX -->
+            <div class="glass-panel p-4 rounded-xl border border-cyan-500/30 mb-6 bg-cyan-950/20">
+                <div class="flex items-center space-x-2 mb-2">
+                    <span class="text-cyan-400 font-orbitron text-xs font-bold tracking-wider">🤖 AI PERFORMANCE COACH INSIGHT</span>
+                </div>
+                <p id="ai-coach-feedback" class="text-sm text-gray-300 italic">Analyzing reflex patterns...</p>
+            </div>
+
+            <button onclick="restartGame()" class="w-full py-3 rounded-xl font-orbitron font-bold text-sm bg-gradient-to-r from-pink-500 to-purple-600 text-white hover:from-pink-400 hover:to-purple-500 transition shadow-lg shadow-pink-500/25 cursor-pointer">
+                RESTART PROTOCOL
+            </button>
+        </div>
+
+    </main>
+
+    <!-- FOOTER / GESTURE GUIDE -->
+    <footer class="w-full p-3 z-20 glass-panel border-t border-white/10 flex justify-between items-center text-xs text-gray-400 font-orbitron">
+        <div>CONTROLS: <span class="text-cyan-400">Mouse Click / Touch</span> OR <span class="text-pink-400">Webcam Air Pinch</span></div>
+        <div>LEKHAN REFERENCE x AI INTEGRATION</div>
+    </footer>
+
+    <!-- GAME LOGIC SCRIPT -->
+    <script>
+        // --- AUDIO SYNTHESIS ENGINE (Web Audio API) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTone(freq, type, duration) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        // --- GAME STATE & VARIABLES ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let gameRunning = false;
+        let score = 0;
+        let lives = 3;
+        let arrows = [];
+        let particles = [];
+        let spawnTimer = 0;
+        let spawnInterval = 90; // frames
+        
+        // AI Metrics & State
+        let aiTier = 1;
+        let reactionTimes = [];
+        let totalAttempts = 0;
+        let successfulClears = 0;
+        let lastSpawnTick = 0;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - 120; // accounting for header/footer
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // --- ARROW CLASS ---
+        class Arrow {
+            constructor() {
+                this.x = Math.random() * (canvas.width - 200) + 100;
+                this.y = -50;
+                this.speed = 2 + (aiTier * 0.8);
+                this.size = 40;
+                this.angle = Math.random() * Math.PI * 2;
+                this.type = Math.random() < 0.25 ? 'decoy' : 'target'; // 25% chance for red decoy arrow
+                this.spawnTime = performance.now();
+            }
+            update() {
+                this.y += this.speed;
+            }
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = this.type === 'target' ? '#06b6d4' : '#ec4899';
+                ctx.fillStyle = this.type === 'target' ? 'rgba(6, 182, 212, 0.2)' : 'rgba(236, 72, 153, 0.2)';
+                
+                // Draw Arrow shape
+                ctx.beginPath();
+                ctx.moveTo(0, -20);
+                ctx.lineTo(15, 15);
+                ctx.lineTo(0, 5);
+                ctx.lineTo(-15, 15);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            }
+            contains(px, py) {
+                let dx = this.x - px;
+                let dy = this.y - py;
+                return Math.sqrt(dx * dx + dy * dy) < this.size;
+            }
+        }
+
+        // --- PARTICLE EFFECT CLASS ---
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.size = Math.random() * 4 + 2;
+                this.speedX = (Math.random() - 0.5) * 8;
+                this.speedY = (Math.random() - 0.5) * 8;
+                this.life = 30;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.life--;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // --- GAME FLOW FUNCTIONS ---
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-hud').classList.remove('hidden');
+            score = 0;
+            lives = 3;
+            aiTier = 1;
+            arrows = [];
+            particles = [];
+            reactionTimes = [];
+            totalAttempts = 0;
+            successfulClears = 0;
+            gameRunning = true;
+            loop();
+        }
+
+        function restartGame() {
+            document.getElementById('gameover-screen').classList.add('hidden');
+            startGame();
+        }
+
+        function triggerGameOver() {
+            gameRunning = false;
+            playTone(150, 'sawtooth', 0.6);
+            document.getElementById('game-hud').classList.add('hidden');
+            document.getElementById('gameover-screen').classList.remove('hidden');
+            
+            // Calculate Analytics for AI Coach
+            let avgReflex = reactionTimes.length ? Math.round(reactionTimes.reduce((a,b)=>a+b,0)/reactionTimes.length) : 350;
+            let accuracy = totalAttempts > 0 ? Math.round((successfulClears / totalAttempts) * 100) : 100;
+
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('final-reflex').innerText = avgReflex + 'ms';
+            document.getElementById('final-acc').innerText = accuracy + '%';
+
+            // Generate AI Coach Feedback
+            let feedback = "";
+            if (accuracy > 85 && avgReflex < 300) {
+                feedback = `Elite performance! Your reflexes (${avgReflex}ms) and precision (${accuracy}%) show high mastery of spatial tracking and rapid decision-making.`;
+            } else if (avgReflex > 450) {
+                feedback = `Good run! Your reaction latency averaged ${avgReflex}ms. Try anticipating the arrow descent earlier to avoid decoy clashes.`;
+            } else {
+                feedback = `Balanced playstyle detected. Watch out for red decoy arrows—clashing with them drained your lives faster than expected!`;
+            }
+            document.getElementById('ai-coach-feedback').innerText = feedback;
+        }
+
+        // --- INTERACTION HANDLER (Click / Touch / Gesture) ---
+        function handleInteraction(x, y) {
+            if (!gameRunning) return;
+            totalAttempts++;
+            let hit = false;
+            for (let i = arrows.length - 1; i >= 0; i--) {
+                if (arrows[i].contains(x, y)) {
+                    hit = true;
+                    let reflexTime = performance.now() - arrows[i].spawnTime;
+                    reactionTimes.push(reflexTime);
+
+                    if (arrows[i].type === 'target') {
+                        // Successful Clear
+                        score += 10 * aiTier;
+                        successfulClears++;
+                        playTone(587.33, 'sine', 0.15); // High beep
+                        for (let p = 0; p < 10; p++) particles.push(new Particle(arrows[i].x, arrows[i].y, '#06b6d4'));
+                    } else {
+                        // Clash with Decoy Arrow!
+                        lives--;
+                        playTone(220, 'square', 0.3); // Low buzzer
+                        for (let p = 0; p < 15; p++) particles.push(new Particle(arrows[i].x, arrows[i].y, '#ec4899'));
+                        if (lives <= 0) {
+                            triggerGameOver();
+                        }
+                    }
+                    arrows.splice(i, 1);
+                    break;
+                }
+            }
+            if (!hit) {
+                // Missed click penalty or tap
+            }
+            updateHUD();
+        }
+
+        canvas.addEventListener('pointerdown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            handleInteraction(e.clientX - rect.left, e.clientY - rect.top);
+        });
+
+        function updateHUD() {
+            document.getElementById('hud-score').innerText = score;
+            document.getElementById('hud-lives').innerText = '❤️'.repeat(Math.max(0, lives));
+            document.getElementById('hud-tier').innerText = `LVL ${aiTier} (Adaptive)`;
+        }
+
+        // --- MAIN GAME LOOP ---
+        function loop() {
+            if (!gameRunning) return;
+
+            // Clear Canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Adaptive AI Difficulty Scaling based on Score
+            if (score > 100 && score <= 250) aiTier = 2;
+            else if (score > 250 && score <= 450) aiTier = 3;
+            else if (score > 450) aiTier = 4;
+            spawnInterval = Math.max(30, 90 - (aiTier * 15));
+
+            // Spawn Arrows
+            spawnTimer++;
+            if (spawnTimer >= spawnInterval) {
+                arrows.push(new Arrow());
+                spawnTimer = 0;
+            }
+
+            // Update & Draw Arrows
+            for (let i = arrows.length - 1; i >= 0; i--) {
+                arrows[i].update();
+                arrows[i].draw();
+
+                // Check if arrow passed bottom boundary (Missed target)
+                if (arrows[i].y > canvas.height + 50) {
+                    if (arrows[i].type === 'target') {
+                        lives--;
+                        playTone(180, 'triangle', 0.2);
+                        if (lives <= 0) {
+                            triggerGameOver();
+                            return;
+                        }
+                        updateHUD();
+                    }
+                    arrows.splice(i, 1);
+                }
+            }
+
+            // Update & Draw Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
+
+            requestAnimationFrame(loop);
+        }
+
+        // --- MEDIAPIPE COMPUTER VISION HAND GESTURE INTEGRATION ---
+        const videoElement = document.getElementById('webcam');
+        const camStatus = document.getElementById('cam-status');
+
+        function onResults(results) {
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                camStatus.classList.remove('bg-red-500');
+                camStatus.classList.add('bg-emerald-400');
+                
+                // Use index fingertip (landmark 8) for tracking air position
+                const indexFinger = results.multiHandLandmarks[0][8];
+                const x = (1 - indexFinger.x) * canvas.width; // mirror x
+                const y = indexFinger.y * canvas.height;
+
+                // Simple pinch or hover detection to trigger clear action
+                if (gameRunning) {
+                    handleInteraction(x, y);
+                }
+            } else {
+                camStatus.classList.remove('bg-emerald-400');
+                camStatus.classList.add('bg-red-500');
+            }
+        }
+
+        const hands = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+        hands.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.6,
+            minTrackingConfidence: 0.6
+        });
+        hands.onResults(onResults);
+
+        const camera = new Camera(videoElement, {
+            onFrame: async () => {
+                await hands.send({ image: videoElement });
+            },
+            width: 640,
+            height: 480
+        });
+        camera.start().catch(() => {
+            console.log("Webcam permission denied or unavailable. Mouse/Touch mode active.");
+        });
+    </script>
+</body>
+</html>
