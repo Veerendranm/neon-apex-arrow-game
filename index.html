@@ -6,129 +6,148 @@
     <title>Neon Apex: AI Protocol</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Anton & Kanit -->
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Kanit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- Google Fonts: Anton (Header) & Kanit (Body) -->
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <!-- MediaPipe Hands -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <style>
+        :root {
+            --bg-color: #050509;
+            --neon-blue: #00f2ff;
+            --neon-pink: #ff0055;
+            --neon-red: #ff1744;
+            --panel-bg: rgba(10, 14, 23, 0.95);
+        }
+
         body { 
             font-family: 'Kanit', sans-serif; 
-            background: radial-gradient(circle at center, #120428 0%, #030008 100%); 
-            color: #ffffff; 
+            background-color: var(--bg-color); 
+            color: #e0e6ed; 
             overflow: hidden; 
         }
         
-        .font-anton { font-family: 'Anton', sans-serif; letter-spacing: 1.5px; }
+        .font-anton { font-family: 'Anton', sans-serif; letter-spacing: 1px; }
         
         .glass-panel { 
-            background: rgba(13, 2, 26, 0.85); 
-            backdrop-filter: blur(16px); 
-            border: 1px solid rgba(217, 70, 239, 0.3);
-            box-shadow: 0 0 25px rgba(217, 70, 239, 0.15);
+            background: var(--panel-bg); 
+            backdrop-filter: blur(12px); 
+            border: 1px solid rgba(0, 242, 255, 0.2);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
         }
 
-        .neon-border-blue {
-            border: 2px solid #00f2ff;
-            box-shadow: 0 0 15px rgba(0, 242, 255, 0.4), inset 0 0 15px rgba(0, 242, 255, 0.2);
-        }
-
-        .neon-border-pink {
-            border: 2px solid #ff007f;
-            box-shadow: 0 0 20px rgba(255, 0, 127, 0.5), inset 0 0 15px rgba(255, 0, 127, 0.2);
-        }
-
-        .text-glow-cyan { text-shadow: 0 0 10px #00f2ff, 0 0 25px #00f2ff; }
-        .text-glow-pink { text-shadow: 0 0 10px #ff007f, 0 0 25px #ff007f; }
-        .text-glow-purple { text-shadow: 0 0 10px #bf5af2, 0 0 25px #bf5af2; }
-
-        .btn-cyber {
-            background: linear-gradient(135deg, #ff007f 0%, #7928ca 100%);
-            box-shadow: 0 0 20px rgba(255, 0, 127, 0.5);
-            transition: all 0.2s ease;
-        }
-        .btn-cyber:hover {
-            transform: scale(1.05);
-            box-shadow: 0 0 30px rgba(255, 0, 127, 0.8);
+        /* Cyberpunk Scanline Effect */
+        &::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(to bottom, rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            z-index: 5;
+            pointer-events: none;
+            opacity: 0.6;
         }
 
         canvas { touch-action: none; }
+
+        /* Custom glowing text shadow */
+        .text-glow-blue { text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue); }
+        .text-glow-pink { text-shadow: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink); }
+        .text-glow-red { text-shadow: 0 0 10px var(--neon-red), 0 0 20px var(--neon-red); }
+
+        /* Animated Gradient Button */
+        .btn-grad {
+            background: linear-gradient(90deg, #00dbde 0%, #fc00ff 100%);
+            background-size: 200% 100%;
+            transition: background-position 0.5s ease;
+        }
+        .btn-grad:hover { background-position: -100% 0; }
     </style>
 </head>
 <body class="h-screen w-screen flex flex-col justify-between select-none relative overflow-hidden">
 
     <!-- Top HUD Bar -->
-    <header class="w-full p-4 px-8 flex justify-between items-center glass-panel z-10 border-b border-fuchsia-500/30">
-        <div class="flex items-center space-x-6">
-            <h1 class="font-anton text-3xl text-cyan-400 text-glow-cyan">NEON APEX</h1>
-            <span id="camStatus" class="px-3 py-1 text-xs font-semibold rounded-full bg-purple-950 text-purple-300 border border-purple-500/40">SYS: Initializing...</span>
+    <header class="w-full p-3 px-6 flex justify-between items-center glass-panel z-10 border-b-2 border-cyan-900">
+        <div class="flex items-center space-x-5">
+            <h1 class="font-anton text-3xl tracking-widest text-cyan-400 text-glow-blue">NEON APEX</h1>
+            <span id="camStatus" class="px-3 py-1 text-xs font-semibold rounded-full bg-gray-800 text-gray-400 border border-gray-700">SYS: Booting...</span>
         </div>
-        <div class="flex items-center space-x-10">
-            <div class="font-anton text-2xl tracking-wider text-cyan-300">SCORE: <span id="scoreDisplay" class="text-white text-glow-cyan text-3xl ml-1">0</span></div>
-            <div class="font-anton text-2xl tracking-wider text-pink-400">LIVES: <span id="livesDisplay" class="text-white text-glow-pink text-2xl ml-1">❤️❤️❤️</span></div>
-            <button onclick="toggleInsightsTab()" class="px-5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-anton text-lg rounded-xl shadow-lg transition transform hover:scale-105 flex items-center gap-2 border border-purple-400/40">
-                🤖 AI LOGS TAB
+        <div class="flex items-center space-x-8 font-anton text-2xl">
+            <div class="text-cyan-300">SCORE: <span id="scoreDisplay" class="text-white text-glow-blue">0</span></div>
+            <div class="text-pink-400">LIVES: <span id="livesDisplay" class="text-white text-glow-pink">❤️❤️❤️</span></div>
+            <button onclick="toggleInsightsTab()" class="px-4 py-1 bg-purple-700 hover:bg-purple-600 text-white text-lg rounded-md shadow-lg transition transform hover:scale-105 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                AI LOGS
             </button>
         </div>
     </header>
 
     <!-- Main Game Arena -->
-    <main class="relative flex-grow flex items-center justify-center overflow-hidden">
+    <main class="relative flex-grow flex items-center justify-center overflow-hidden bg-[#050509]">
         <video id="webcam" class="absolute opacity-0 pointer-events-none" width="640" height="480" autoplay playsinline></video>
         <canvas id="gameCanvas" class="absolute inset-0 w-full h-full cursor-crosshair z-10"></canvas>
 
-        <!-- Dynamic Grid Background Layer -->
-        <div class="absolute inset-0 pointer-events-none opacity-20 z-0" style="background-image: linear-gradient(#bf5af2 1px, transparent 1px), linear-gradient(90deg, #bf5af2 1px, transparent 1px); background-size: 50px 50px;"></div>
+        <!-- Scanline overlay (decorative) -->
+        <div class="absolute inset-0 pointer-events-none z-20 opacity-30" style="background: repeating-linear-gradient(0deg, rgba(0,0,0,0.2), rgba(0,0,0,0.2) 1px, transparent 1px, transparent 2px);"></div>
 
         <!-- Hand Cursor Indicator -->
-        <div id="handCursor" class="absolute w-10 h-10 rounded-full border-2 border-cyan-400 bg-cyan-400/30 shadow-[0_0_20px_#00f2ff] pointer-events-none transform -translate-x-1/2 -translate-y-1/2 hidden z-30 transition-all duration-75"></div>
+        <div id="handCursor" class="absolute w-10 h-10 rounded-full border-4 border-pink-500 bg-pink-500/20 shadow-[0_0_15px_#ff0055] pointer-events-none transform -translate-x-1/2 -translate-y-1/2 hidden z-30 transition-transform duration-50 ease-linear"></div>
 
         <!-- Start Screen Overlay -->
-        <div id="startScreen" class="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/95 p-6 text-center">
-            <div class="p-12 rounded-3xl glass-panel neon-border-cyan max-w-xl w-full">
-                <h2 class="font-anton text-6xl md:text-7xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-pink-500 mb-4 text-glow-cyan tracking-wider">AI ARROW PROTOCOL</h2>
-                <p class="text-gray-300 text-lg mb-8 font-light">
-                    Use your webcam hand gestures or mouse to slice glowing data arrows. <br>
-                    <span class="text-pink-400 font-semibold text-glow-pink">Avoid</span> the crimson hazard nodes!
+        <div id="startScreen" class="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black p-10 text-center">
+            <div class="p-12 rounded-3xl glass-panel border-4 border-cyan-500/50 shadow-[0_0_40px_#00f2ff]">
+                <h2 class="font-anton text-8xl text-transparent bg-clip-text bg-gradient-to-b from-white via-cyan-300 to-cyan-500 mb-4 tracking-wider drop-shadow-[0_0_15px_#00f2ff]">AI PROTOCOL</h2>
+                <p class="text-xl text-gray-200 max-w-lg mb-10 font-light leading-relaxed">
+                    Webcam Active. Intercept incoming Data-Arrows with your index fingertip. <br>
+                    <span class="text-red-400 font-semibold">Avoid</span> the Red Corruption Nodes.
                 </p>
-                <button onclick="startGame()" class="w-full py-5 btn-cyber text-white font-anton text-3xl rounded-2xl tracking-wider">
-                    LAUNCH PROTOCOL
+                <button onclick="startGame()" class="px-16 py-6 btn-grad text-black font-anton text-3xl rounded-2xl shadow-2xl transition transform hover:scale-105 tracking-widest">
+                    INITIATE SEQUENCE
                 </button>
             </div>
         </div>
 
-        <!-- Game Over Screen Overlay -->
-        <div id="gameOverScreen" class="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/95 p-6 text-center hidden">
-            <div class="p-10 rounded-3xl glass-panel neon-border-pink max-w-md w-full">
-                <h2 id="gameOverTitle" class="font-anton text-5xl text-pink-500 text-glow-pink mb-3 tracking-wide">MISSION TERMINATED</h2>
-                <p id="gameOverSub" class="text-gray-300 mb-6 text-lg">Great try! Ready for another run?</p>
-                <div class="glass-panel p-6 rounded-2xl mb-8 border border-cyan-500/30 bg-black/50">
-                    <div class="text-gray-400 font-anton text-sm tracking-widest uppercase">FINAL SCORE ACHIEVED</div>
-                    <div id="finalScore" class="font-anton text-6xl text-cyan-400 text-glow-cyan mt-1">0</div>
+        <!-- Game Over Overlay -->
+        <div id="gameOverScreen" class="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm p-10 text-center hidden">
+            <div class="p-10 rounded-3xl glass-panel border-4 border-pink-500 shadow-[0_0_40px_#ff0055]">
+                <h2 id="gameOverTitle" class="font-anton text-7xl text-pink-400 mb-3 tracking-wider text-glow-pink">SYSTEM FAILURE</h2>
+                <p id="gameOverSub" class="text-2xl text-gray-100 mb-8 font-light">Target acquisition compromised.</p>
+                <div class="glass-panel p-6 rounded-xl mb-10 border-pink-500/30 bg-gray-950">
+                    <div class="text-gray-300 text-sm tracking-wider uppercase">Final Data-Points</div>
+                    <div id="finalScore" class="font-anton text-7xl text-cyan-300 text-glow-blue">0</div>
                 </div>
-                <div class="flex flex-col gap-3">
-                    <button onclick="toggleInsightsTab()" class="w-full py-3 bg-purple-900/80 hover:bg-purple-800 text-purple-200 font-anton text-xl rounded-xl tracking-wider border border-purple-500/40">OPEN AI PERFORMANCE LOGS</button>
-                    <button onclick="startGame()" class="w-full py-4 btn-cyber text-white font-anton text-2xl rounded-xl tracking-wider">🔄 TRY AGAIN</button>
+                <div class="flex gap-4 justify-center">
+                     <button onclick="toggleInsightsTab()" class="px-8 py-4 bg-gray-700 hover:bg-gray-600 text-white font-anton text-2xl rounded-xl tracking-widest">REVIEW LOGS</button>
+                     <button onclick="startGame()" class="px-12 py-4 btn-grad text-black font-anton text-2xl rounded-xl tracking-widest flex items-center gap-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.45067 13.9082C4.67191 15.3625 5.90906 16.5 7.38399 16.5H16.616C18.0909 16.5 19.3281 15.3625 19.5493 13.9082L20.1743 9.7582C20.3768 8.40818 19.3795 7.25 18.0164 7.25H5.98356C4.62047 7.25 3.6232 8.40818 3.82567 9.7582L4.45067 13.9082Z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.5 10.5V8.25C16.5 7.00736 15.4926 6 14.25 6H9.75C8.50736 6 7.5 7.00736 7.5 8.25V10.5"></path></svg>
+                        RETRY
+                    </button>
                 </div>
             </div>
         </div>
 
-        <!-- Dedicated AI Insights Modal Tab -->
-        <div id="insightsModal" class="absolute inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-6 hidden">
-            <div class="glass-panel neon-border-cyan max-w-lg w-full p-8 rounded-3xl relative">
+        <!-- AI Insights Popup Tab -->
+        <div id="insightsModal" class="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-6 hidden">
+            <div class="glass-panel max-w-2xl w-full p-8 rounded-3xl border-2 border-purple-500/50 relative shadow-[0_0_30px_rgba(128,0,128,0.5)]">
                 <button onclick="toggleInsightsTab()" class="absolute top-5 right-5 text-gray-400 hover:text-white text-3xl font-black">&times;</button>
-                <h3 class="font-anton text-3xl text-cyan-400 text-glow-cyan mb-6 flex items-center gap-3">🤖 AI COACHING ANALYTICS</h3>
-                <div id="insightsContent" class="space-y-4 text-base text-gray-200 bg-black/60 p-6 rounded-2xl border border-cyan-500/30 font-light">
-                    <p class="text-gray-400 italic text-center py-6">Play a full session to populate your neural diagnostic stats.</p>
+                <h3 class="font-anton text-4xl text-purple-300 mb-6 tracking-widest flex items-center gap-3">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
+                    PERFORMANCE LOGS
+                </h3>
+                <div id="insightsContent" class="space-y-5 text-lg text-gray-100 bg-gray-950 p-6 rounded-xl border border-purple-900">
+                    <p class="text-gray-400 italic text-center py-10">Awaiting session data...</p>
                 </div>
-                <button onclick="toggleInsightsTab()" class="mt-6 w-full py-3 bg-gray-800 hover:bg-gray-700 text-gray-200 font-anton text-xl rounded-xl tracking-wider">CLOSE TAB</button>
+                <button onclick="toggleInsightsTab()" class="mt-8 w-full py-3 bg-purple-900 hover:bg-purple-800 text-purple-200 font-anton text-xl rounded-xl tracking-widest">CLOSE INTERFACE</button>
             </div>
         </div>
     </main>
 
     <!-- Footer Status -->
-    <footer class="w-full p-3 px-6 text-center text-xs text-fuchsia-400 glass-panel border-t border-fuchsia-500/30 font-mono">
-        NEON APEX ENGINE v3.0 • INTERACTIVE GESTURE MATRIX ACTIVE
+    <footer class="w-full p-2 px-6 text-left text-xs text-cyan-800 glass-panel border-t-2 border-cyan-900/50 flex justify-between font-mono">
+        <span>UNIT_ID: GUEST-ALPHA</span>
+        <span>STATUS: ONLINE [GESTURE_ENGINE]</span>
+        <span>VERSION: 2.1 [CYBER_BETA]</span>
     </footer>
 
     <!-- Game Logic Script -->
@@ -153,275 +172,9 @@
         let gameInterval;
         let spawnInterval;
         
-        let totalClicks = 0;
-        let successfulClicks = 0;
+        let totalInteractions = 0;
+        let successfulInteractions = 0;
         let reactionTimes = [];
 
         function resizeCanvas() {
             canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight - 120;
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playSound(type) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-
-            if (type === 'hit') {
-                osc.frequency.setValueAtTime(500, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(900, audioCtx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.1);
-            } else if (type === 'miss' || type === 'decoy') {
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(180, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.2);
-                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.2);
-            }
-        }
-
-        function toggleInsightsTab() {
-            insightsModal.classList.toggle('hidden');
-            if (!insightsModal.classList.contains('hidden')) {
-                generateInsightsReport();
-            }
-        }
-
-        function generateInsightsReport() {
-            let accuracy = totalClicks > 0 ? Math.round((successfulClicks / totalClicks) * 100) : 0;
-            let avgTime = reactionTimes.length > 0 ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length) : 280;
-            
-            let coachingMsg = "Good coordination! Keep your gestures smooth and fluid to catch all cyan targets.";
-            if (accuracy > 85) coachingMsg = "Exceptional precision! Your reflex processing speed is elite.";
-            else if (score > 15) coachingMsg = "Solid focus! Watch out closely for the crimson hazard nodes.";
-
-            insightsContent.innerHTML = `
-                <div class="space-y-4">
-                    <div class="flex justify-between border-b border-cyan-500/20 pb-2 font-anton text-lg"><span>TARGET ACCURACY:</span> <strong class="text-cyan-400 text-glow-cyan">${accuracy}%</strong></div>
-                    <div class="flex justify-between border-b border-cyan-500/20 pb-2 font-anton text-lg"><span>AVG REFLEX SPEED:</span> <strong class="text-cyan-400 text-glow-cyan">${avgTime} ms</strong></div>
-                    <div class="flex justify-between border-b border-cyan-500/20 pb-2 font-anton text-lg"><span>TOTAL SCORE:</span> <strong class="text-cyan-400 text-glow-cyan">${score}</strong></div>
-                    <div class="mt-4 p-4 bg-purple-950/50 rounded-xl border border-purple-500/30">
-                        <strong class="text-purple-300 font-anton tracking-wider block mb-1">AI COACH EVALUATION:</strong>
-                        <p class="text-sm text-gray-300 font-light">${coachingMsg}</p>
-                    </div>
-                </div>
-            `;
-        }
-
-        function startGame() {
-            startScreen.classList.add('hidden');
-            gameOverScreen.classList.add('hidden');
-            score = 0;
-            lives = 3;
-            arrows = [];
-            particles = [];
-            totalClicks = 0;
-            successfulClicks = 0;
-            reactionTimes = [];
-            updateHUD();
-            gameRunning = true;
-
-            clearInterval(gameInterval);
-            clearInterval(spawnInterval);
-
-            gameInterval = setInterval(updateGame, 1000 / 60);
-            spawnInterval = setInterval(spawnArrow, 1100);
-        }
-
-        function updateHUD() {
-            scoreDisplay.innerText = score;
-            livesDisplay.innerText = '❤️'.repeat(Math.max(0, lives)) || '🖤';
-        }
-
-        function spawnArrow() {
-            if (!gameRunning) return;
-            const isDecoy = Math.random() < 0.28; // ~28% chance for a red hazard node
-            const x = Math.random() * (canvas.width - 120) + 60;
-            arrows.push({
-                x: x,
-                y: canvas.height + 60,
-                speed: 3.5 + Math.min(score * 0.12, 5.5),
-                isDecoy: isDecoy,
-                spawnTime: Date.now()
-            });
-        }
-
-        function createParticles(x, y, color) {
-            for (let i = 0; i < 18; i++) {
-                particles.push({
-                    x: x, y: y,
-                    vx: (Math.random() - 0.5) * 10,
-                    vy: (Math.random() - 0.5) * 10,
-                    color: color,
-                    alpha: 1,
-                    life: 35
-                });
-            }
-        }
-
-        function updateGame() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            // Particles
-            for (let i = particles.length - 1; i >= 0; i--) {
-                let p = particles[i];
-                p.x += p.vx;
-                p.y += p.vy;
-                p.alpha -= 1 / p.life;
-                ctx.save();
-                ctx.globalAlpha = Math.max(0, p.alpha);
-                ctx.fillStyle = p.color;
-                ctx.fillRect(p.x, p.y, 5, 5);
-                ctx.restore();
-                if (p.alpha <= 0) particles.splice(i, 1);
-            }
-
-            // Arrows / Hazards
-            for (let i = arrows.length - 1; i >= 0; i--) {
-                let arrow = arrows[i];
-                arrow.y -= arrow.speed;
-
-                ctx.save();
-                ctx.translate(arrow.x, arrow.y);
-                ctx.strokeStyle = arrow.isDecoy ? '#ff0055' : '#00f2ff';
-                ctx.fillStyle = arrow.isDecoy ? '#ff0055' : '#00f2ff';
-                ctx.lineWidth = 5;
-                ctx.shadowBlur = 20;
-                ctx.shadowColor = arrow.isDecoy ? '#ff0055' : '#00f2ff';
-
-                if (arrow.isDecoy) {
-                    // Draw Neon Red Hazard X Node
-                    ctx.beginPath();
-                    ctx.moveTo(-15, -15); ctx.lineTo(15, 15);
-                    ctx.moveTo(15, -15); ctx.lineTo(-15, 15);
-                    ctx.stroke();
-                } else {
-                    // Draw Glowing Cyber Arrow
-                    ctx.beginPath();
-                    ctx.moveTo(0, 25);
-                    ctx.lineTo(0, -25);
-                    ctx.moveTo(-12, -12);
-                    ctx.lineTo(0, -25);
-                    ctx.lineTo(12, -12);
-                    ctx.stroke();
-                }
-                ctx.restore();
-
-                // Missed normal target penalty
-                if (arrow.y < -60) {
-                    arrows.splice(i, 1);
-                    if (!arrow.isDecoy) {
-                        lives--;
-                        playSound('miss');
-                        updateHUD();
-                        if (lives <= 0) endGame("MISSION TERMINATED", "Too many nodes missed!");
-                    }
-                }
-            }
-        }
-
-        function checkInteraction(x, y) {
-            if (!gameRunning) return;
-            totalClicks++;
-
-            for (let i = arrows.length - 1; i >= 0; i--) {
-                let arrow = arrows[i];
-                let dist = Math.hypot(arrow.x - x, arrow.y - y);
-
-                if (dist < 65) {
-                    let reactionTime = Date.now() - arrow.spawnTime;
-                    reactionTimes.push(reactionTime);
-
-                    if (arrow.isDecoy) {
-                        lives--;
-                        playSound('decoy');
-                        createParticles(arrow.x, arrow.y, '#ff0055');
-                        arrows.splice(i, 1);
-                        updateHUD();
-                        if (lives <= 0) endGame("SYSTEM COMPROMISED", "You struck a crimson hazard node!");
-                    } else {
-                        score++;
-                        successfulClicks++;
-                        playSound('hit');
-                        createParticles(arrow.x, arrow.y, '#00f2ff');
-                        arrows.splice(i, 1);
-                        updateHUD();
-                    }
-                    break;
-                }
-            }
-        }
-
-        canvas.addEventListener('click', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            checkInteraction(e.clientX - rect.left, e.clientY - rect.top);
-        });
-
-        function endGame(title, subtitle) {
-            gameRunning = false;
-            clearInterval(gameInterval);
-            clearInterval(spawnInterval);
-            document.getElementById('gameOverTitle').innerText = title;
-            document.getElementById('gameOverSub').innerText = subtitle;
-            document.getElementById('finalScore').innerText = score;
-            gameOverScreen.classList.remove('hidden');
-        }
-
-        function onResults(results) {
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                const landmarks = results.multiHandLandmarks[0];
-                const indexFinger = landmarks[8];
-                
-                const x = (1 - indexFinger.x) * canvas.width;
-                const y = indexFinger.y * canvas.height;
-
-                handCursor.style.left = `${x}px`;
-                handCursor.style.top = `${y + 60}px`;
-                handCursor.classList.remove('hidden');
-
-                if (gameRunning) {
-                    checkInteraction(x, y);
-                }
-            } else {
-                handCursor.classList.add('hidden');
-            }
-        }
-
-        const hands = new Hands({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-        });
-        hands.setOptions({
-            maxNumHands: 1,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.6,
-            minTrackingConfidence: 0.6
-        });
-        hands.onResults(onResults);
-
-        const camera = new Camera(videoElement, {
-            onFrame: async () => {
-                await hands.send({ image: videoElement });
-            },
-            width: 640,
-            height: 480
-        });
-        camera.start().then(() => {
-            camStatus.innerText = "SYS: Camera Active 🖐️";
-            camStatus.className = "px-3 py-1 text-xs font-semibold rounded-full bg-cyan-950 text-cyan-300 border border-cyan-500/40";
-        }).catch(() => {
-            camStatus.innerText = "SYS: Touch/Mouse Mode Active";
-            camStatus.className = "px-3 py-1 text-xs font-semibold rounded-full bg-blue-950 text-blue-300 border border-blue-500/40";
-        });
-    </script>
-</body>
-</html>
